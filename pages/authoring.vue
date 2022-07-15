@@ -167,25 +167,39 @@
           <p />
           <!-- ============= Authoring Results -->
           <v-card v-if="authorCollection.length > 0" class="mt-1" outlined color="yellow lighten-5">
+            Separate sentences with •
             <v-simple-table class="mt-3">
               <tbody v-for="(entry, i) in authorCollection" :key="i">
                 <tr>
-                  <td> {{ i+1 }} </td>
-                  <td> {{ entry.sub }}
-                  </td>
-                  <td class="text-right">
+                  <td> {{ i+1 }}
                     <v-icon color="orange" @click="removeQue(entry, i)">
                       mdi-close
+                    </v-icon>
+                  </td>
+                  <td> <v-textarea v-model="entry.sub" @change="setHighlight(entry, i)" />
+                    <span v-if="entry.cuepoint"> {{ entry.cuepoint.length }} </span>
+                  </td>
+                  <td class="text-right" width="50">
+                    <v-icon color="green" @click="playSegment(entry)">
+                      mdi-play-circle
+                    </v-icon>
+                    <v-icon color="info" @click="setCuePoint(entry, i)">
+                      mdi-clock-outline
+                    </v-icon>
+                    <v-icon color="pink" @click="delCuePoint(entry, i)">
+                      mdi-close-circle-outline
                     </v-icon>
                   </td>
                 </tr>
               </tbody>
             </v-simple-table>
             <v-card-actions>
-              <v-text-field label="Doc id: ic_01_01" />
-              <v-spacer />
-              <v-btn color="light-blue" outlined small>
-                save questions
+              <v-text-field label="Doc id: ic_01_01" v-model="icdocid"/>
+              <v-btn color="light-blue" outlined small @click="saveQue">
+                save
+              </v-btn>
+              <v-btn color="light-pink" outlined small @click="editQue" :disabled="icdocid == ''">
+                edit
               </v-btn>
             </v-card-actions>
           </v-card>
@@ -206,7 +220,7 @@
                 <!-- <tr v-if="!entry.demo"> -->
                 <tr>
                   <td> <v-checkbox v-model="entry.demo" @change="addDemo(entry)" /> </td>
-                  <td v-html="entry.html" />
+                  <td v-html="entry.html" @mouseup="markup(entry, $event)" />
                   <td class="text-right">
                     <v-icon color="blue" @click="rewind5()">
                       mdi-rewind-5
@@ -239,6 +253,7 @@ export default {
   // },
   data () {
     return {
+      icdocid: '',
       selCode: '',
       gtagCollection: {},
       searchbycode: false,
@@ -313,42 +328,87 @@ export default {
     }
   },
   methods: {
+    delCuePoint (entry, i) {
+      entry.cuepoint = []
+      console.log(entry)
+    },
+    setCuePoint (entry, i) {
+      this.$refs.youtube.player.getCurrentTime().then((time) => {
+        if (entry.cuepoint) {
+          entry.cuepoint.push(time - 0.8)
+        } else {
+          entry.cuepoint = []
+          entry.cuepoint.push(time - 0.8)
+        }
+      })
+      console.log(entry)
+    },
+    async setHighlight (entry, i) {
+      const OpenCC = require('opencc-js')
+      const convert = await OpenCC.Converter('tw', 'cn')
+      entry.subarr = entry.sub.split('•')
+      entry.subsimparr = []
+      entry.subarr.forEach((item) => {
+        entry.subsimparr.push(convert(item).split('\r').join(''))
+      })
+      console.log(entry)
+    },
+    editQue () {
+      this.$fire.firestore.collection('-video_practice').doc(this.icdocid).get().then((res) => {
+        console.log(res.data().que)
+        this.authorCollection = res.data().que
+      })
+    },
+    saveQue () {
+      console.log(this.authorCollection)
+      const tmp = JSON.parse(JSON.stringify(this.authorCollection))
+      tmp.forEach((item) => {
+        console.log(item.sub)
+        item.sub = item.sub.split('•').join('')
+      })
+      const obj = { que: tmp }
+      this.$fire.firestore.collection('-video_practice').doc(this.icdocid).set(obj).then((res) => {
+        console.log('success')
+      })
+    },
     removeQue (entry, i) {
       // console.log(i)
       this.authorCollection.splice(i, 1)
       this.authorCollection = JSON.parse(JSON.stringify(this.authorCollection))
       // console.log(this.authorCollection)
     },
-    // async markup (item, event) {
-    //   if (window.getSelection().isCollapsed) { return }
-    //   console.log(this.$store.state.userData)
+    async markup (item, event) {
+      if (window.getSelection().isCollapsed) { return }
+      console.log(this.$store.state.userData)
 
-    //   const OpenCC = require('opencc-js')
-    //   const convert = await OpenCC.Converter('tw', 'cn')
-    //   let subsimpx = convert(item.sub)
-    //   subsimpx = subsimpx.split('\r').join('')
-    //   const anst = window.getSelection().getRangeAt(0).toString()
-    //   let anssimpx = convert(anst)
-    //   if (anst.length !== anssimpx.length) {
-    //     anssimpx = anssimpx.split('\r').join('')
-    //   }
-    //   this.authorCollection.push({ sub: item.sub.split(anst).join('___'), subsimp: subsimpx.split(anssimpx).join('___'), ans: anst, anssimp: anssimpx, start: item.start, vid: item.vid })
-    //   const range = window.getSelection().getRangeAt(0)
-    //   console.log(range)
-    //   const text = window.getSelection().isCollapsed // true, no text selected
-    //   console.log(this.authorCollection)
-    //   console.log(anst.length === anssimpx.length)
-    // },
+      const OpenCC = require('opencc-js')
+      const convert = await OpenCC.Converter('tw', 'cn')
+      let subsimpx = convert(item.sub)
+      subsimpx = subsimpx.split('\r').join('')
+      const anst = window.getSelection().getRangeAt(0).toString()
+      let anssimpx = convert(anst)
+      if (anst.length !== anssimpx.length) {
+        anssimpx = anssimpx.split('\r').join('')
+      }
+      this.authorCollection.push({ sub: item.sub.split(anst).join('___'), subsimp: subsimpx.split(anssimpx).join('___'), ans: anst, anssimp: anssimpx, start: item.start, vid: item.vid })
+      // // const range = window.getSelection().getRangeAt(0)
+      // // console.log(range)
+      // const text = window.getSelection().isCollapsed // true, no text selected
+      // console.log(this.authorCollection)
+      // console.log(anst.length === anssimpx.length)
+    },
     saveScript () {
       // console.log(this.demoArrayClone)
+      // documentation: https://developers.google.com/apps-script/reference/slides/slide
       const gc = []
       // console.log(this.dayjs.duration(100))
       this.demoArrayClone.forEach((item) => {
-        gc.push({ id: item.vid, start: this.dayjs.duration(item.start * 1000).format('H:mm:ss') })
+        console.log(item)
+        gc.push({ trad: item.sub, simp: item.subsimp, id: item.vid, start: this.dayjs.duration(item.start * 1000).format('H:mm:ss') })
         // gc.push({ id: item.vid, start: item.start })
       })
       const gc1 = JSON.stringify(gc)
-      const gc2 = 'const urls = ' + gc1 + '; function Snippets() {}; const presentation = SlidesApp.getActivePresentation(); urls.forEach(item => { const slide = presentation.appendSlide(); const video = slide.insertVideo("https://www.youtube.com/watch?v=" + item.id, 10, 10, 550, 380); const shape = slide.insertTextBox(item.start, 600, 10, 80, 30); })'
+      const gc2 = 'const simp = true; const urls = ' + gc1 + '; function Snippets() {}; const presentation = SlidesApp.getActivePresentation(); urls.forEach(item => { const slide = presentation.appendSlide(); const video = slide.insertVideo("https://www.youtube.com/watch?v=" + item.id, 10, 10, 520, 340); const shape = slide.insertTextBox(item.start, 600, 10, 80, 30); const char = simp ? item.simp : item.trad; const textBox = slide.insertTextBox(char, 10, 350, 500, 30); })'
       this.pptscript = gc2
     },
     codeSearch () {
@@ -484,8 +544,15 @@ export default {
       if (this.$store.state.userObj && this.$store.state.userObj.email) {
         if (demoentry.demo) { // add
           // console.log(demoentry)
-          const tmp = { start2: demoentry.start, menu: false, ...demoentry }
-          this.demoArrayClone = this.demoArrayClone.concat(JSON.parse(JSON.stringify(tmp)))
+          const OpenCC = require('opencc-js')
+          OpenCC.Converter('tw', 'cn').then((convert) => {
+            console.log(convert(demoentry.sub))
+            let simp = convert(demoentry.sub).replace('\r', '')
+            simp = convert(demoentry.sub).replace('\n', '')
+            const tmp = { subsimp: simp, start2: demoentry.start, menu: false, ...demoentry }
+            this.demoArrayClone = this.demoArrayClone.concat(JSON.parse(JSON.stringify(tmp)))
+            console.log(this.demoArrayClone)
+          })
           // console.log(this.demoArrayClone)
         } else { // remove
           const found = this.demoArrayClone.findIndex((ele) => { return ele.start === demoentry.start })
@@ -508,17 +575,15 @@ export default {
       const convert = await OpenCC.Converter('tw', 'cn')
       this.subsimp = convert(str)
       // console.log(this.subsimp)
-      if (str.length !== this.subsimp.length) {
-        // this.subsimp = this.subsimp.replace(/[\x00-\x1F\x7F-\x9F]/g, '')
-        this.subsimp = this.subsimp.replace('\r', '')
-        this.subsimp = this.subsimp.replace('\n', '')
-        // console.log(JSON.stringify(this.subsimp))
-      }
+      // this.subsimp = this.subsimp.replace(/[\x00-\x1F\x7F-\x9F]/g, '')
+      this.subsimp = this.subsimp.replace('\r', '')
+      this.subsimp = this.subsimp.replace('\n', '')
+      // console.log(JSON.stringify(this.subsimp))
     },
     playSegment (obj) {
-      // console.log(obj)
+      console.log(obj)
       // this.convertChar(obj.sub)
-      this.convertChar(obj.html)
+      // this.convertChar(obj.html)
       this.subtrad = obj.html
       let starttime = 0
       if (obj.start2) {

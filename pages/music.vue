@@ -13,18 +13,21 @@
             />
             <v-text-field v-model="vid" @change="parseURL" />
             <v-simple-table dense>
-              <thead>
+              <tbody>
                 <tr>
-                  <th class="text-left">
+                  <td class="text-left">
                     JSON.stringify(this.videoCollection)
-                  </th>
-                  <th class="text-left">
+                  </td>
+                  <td>
+                    <v-text-field v-model="jsonString" />
+                  </td>
+                  <td class="text-right">
                     <v-btn outlined small @click="saveDoc">
                       save doc
                     </v-btn>
-                  </th>
+                  </td>
                 </tr>
-              </thead>
+              </tbody>
             </v-simple-table>
             <v-textarea
               v-model="taVocab"
@@ -91,9 +94,9 @@
               </v-btn>
             </v-card-actions>
             <v-card-actions>
-              <v-text-field v-model="total_char" label="total_char" />
-              <v-text-field v-model="video_length" label="video_length" />
-              <v-btn outlined small :disabled="video_length==='' || total_char===''" @click="update_stats">
+              <v-text-field v-model="indexCount" label="+ indexCount" />
+              <v-text-field v-model="duration" label="+ duration" />
+              <v-btn outlined small :disabled="duration==='' || indexCount===0" @click="update_stats">
                 update stats
               </v-btn>
             </v-card-actions>
@@ -126,6 +129,7 @@ export default {
   },
   data () {
     return {
+      jsonString: '',
       stats_obj: null,
       unique_char: [],
       total_char: '',
@@ -149,7 +153,7 @@ export default {
       vocab: '',
       videoId: 'qKTAf5hSyzY',
       repeatwords: [],
-      skipwords: ['：', '、', '"', '\'', '-', '_', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '哦', '喲', '呢', '啊', '呀', '呐', '唉', '哎', '了', '我', ' ', '，', '。', '！', '？', '《', '》', ',', '.', '?', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'],
+      skipwords: ['《', '》', '…', '：', '、', '"', '\'', '-', '_', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '哦', '喲', '呢', '啊', '呀', '呐', '唉', '哎', '了', '我', ' ', '，', '。', '！', '？', '《', '》', ',', '.', '?', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'],
       playerVars: {
         autoplay: 0,
         controls: 1,
@@ -167,19 +171,18 @@ export default {
   },
   methods: {
     async saveDoc () {
-      const res = await this.$fire.firestore.collection('-video_coll').doc(this.videoId).set({ sub: this.videoCollection })
+      const res = await this.$fire.firestore.collection('-video_coll').doc(this.videoId).set({ sub: this.videoCollection }, { merge: true })
       console.warn(res)
     },
-    update_stats () {
-      // video_count +1, total_char, video_length, unique_char[]
-      const vCount = this.stats_obj.video_count + 1
-      const tChar = this.stats_obj.total_char + Number(this.indexCount)
-      const vLength = this.stats_obj.video_length + Number(this.video_length)
-      const obj = { video_count: vCount, total_char: tChar, video_length: vLength, unique_char: this.unique_char }
-      // console.log(obj)
-      this.$fire.firestore.collection('-video_stats').doc('stats_doc').set(obj).then(() => {
-        console.log('stats update success')
-      }).catch((err) => { console.log(err.message) })
+    async update_stats () {
+      const res = await this.$fire.firestore.collection('-video_stats').doc('stats_doc')
+        .update({
+          video_count: this.$fireModule.firestore.FieldValue.increment(1),
+          total_char: this.$fireModule.firestore.FieldValue.increment(Number(this.indexCount)),
+          video_length: this.$fireModule.firestore.FieldValue.increment(Number(this.duration)),
+          unique_char: this.unique_char
+        })
+      console.warn(res, 'stats updated')
     },
     save_meta () {
       const obj = { level: this.levelSel, access: this.accessSel, cc: this.ccSel, genre: this.genreSel, duration: Number(this.duration), title: this.title }
@@ -232,7 +235,14 @@ export default {
       // console.log(temp[0].split('?v=')[1])
     },
     parseJson () {
-      this.videoCollection = JSON.parse(this.taVocab)
+      const temp = JSON.parse(this.taVocab)
+      temp.forEach((item) => {
+        delete item.duration
+        item.start = Number(item.start).toFixed(3)
+        // console.log(item.start)
+      })
+      this.videoCollection = temp
+      this.jsonString = JSON.stringify(temp)
     },
     async init () {
       const res = await this.$fire.firestore.collection('-video_stats').doc('stats_doc').get()

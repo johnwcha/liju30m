@@ -7,11 +7,22 @@ export default {
   // Global page headers: https://go.nuxtjs.dev/config-head
   head: {
     // titleTemplate: '%s - liju30m',
-    title: 'liju30m',
+    title: '大海撈 • 珍',
     meta: [
       { charset: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { hid: 'description', name: 'description', content: '' }
+      { hid: 'description', name: 'description', content: 'one of the best ways to find targeted videon content on YouTube for your Chinese instruction' }
+    ],
+    script: [
+      {
+        src: "https://www.gstatic.com/dialogflow-console/fast/messenger-cx/bootstrap.js?v=1",
+      },
+      {
+        src: 'https://aka.ms/csspeech/jsbrowserpackageraw',
+      },
+      {
+        src: 'https://unpkg.com/axios/dist/axios.min.js'
+      }
     ],
     link: [
       { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
@@ -37,11 +48,12 @@ export default {
     // https://go.nuxtjs.dev/vuetify
     '@nuxtjs/vuetify'
   ],
-
   // Modules: https://go.nuxtjs.dev/config-modules
   modules: [
     // https://go.nuxtjs.dev/pwa
     '@nuxtjs/pwa',
+    '@nuxtjs/axios',
+    '@nuxtjs/auth-next',
     [
       '@nuxtjs/firebase',
       {
@@ -64,8 +76,16 @@ export default {
           //   }
           // },
           analytics: true,
+          functions: true,
           firestore: true,
-          auth: true // Just as example. Can be any other service.
+          auth: {
+            persistence: 'local', // default
+            initialize: {
+              // onAuthStateChangedMutation: 'ON_AUTH_STATE_CHANGED_MUTATION',
+              onAuthStateChangedAction: 'onAuthStateChangedAction',
+              subscribeManually: false
+            }
+          }
         }
       }
     ]
@@ -99,5 +119,13 @@ export default {
 
   // Build Configuration: https://go.nuxtjs.dev/config-build
   build: {
+    // extend (config, ctx) {
+    //   config.resolve.symlinks = false
+    // }
+  },
+  generate: {
+    dir: 'dist/admin'
+    // dir: 'dist/user'
+    // firebase deploy --only hosting
   }
 }

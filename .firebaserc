@@ -1,5 +1,17 @@
 {
   "projects": {
     "default": "liju30m"
+  },
+  "targets": {
+    "liju30m": {
+      "hosting": {
+        "user": [
+          "chinese-new-ear"
+        ],
+        "admin": [
+          "liju30m"
+        ]
+      }
+    }
   }
 }

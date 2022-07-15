@@ -160,7 +160,7 @@ export default {
       vocab: '',
       videoId: 'qKTAf5hSyzY',
       repeatwords: [],
-      skipwords: ['：', '、', '"', '\'', '-', '_', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '哦', '喲', '呢', '啊', '呀', '呐', '唉', '哎', '了', '我', ' ', '，', '。', '！', '？', '《', '》', ',', '.', '?', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'],
+      skipwords: ['《', '》', '…', '：', '、', '"', '\'', '-', '_', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '哦', '喲', '呢', '啊', '呀', '呐', '唉', '哎', '了', '我', ' ', '，', '。', '！', '？', '《', '》', ',', '.', '?', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'],
       playerVars: {
         autoplay: 0,
         controls: 1,
@@ -177,7 +177,8 @@ export default {
     this.init()
   },
   methods: {
-    getJSON () {
+    outputJSON () {
+      // delete item.duration
       this.txtJSON = JSON.stringify(this.videoCollection)
     },
     getCurrentTime () {
@@ -185,21 +186,20 @@ export default {
         console.log(value, this.lineCount)
         const count = Number(this.lineCount)
         // console.log(new Date((value.toFixed(1)-.6) * 1000).toISOString().substr(11, 12))
-        this.videoCollection[count].id = new Date((value.toFixed(1) - 0.6) * 1000).toISOString().substr(11, 12)
-        this.videoCollection[count].start = Number.parseFloat(value).toFixed(3) - 0.6
+        this.videoCollection[count].id = new Date((value.toFixed(1) - 0.8) * 1000).toISOString().substr(11, 12)
+        this.videoCollection[count].start = Number.parseFloat(value).toFixed(3) - 0.8
         this.lineCount = count + 1
       })
     },
-    update_stats () {
-      // video_count +1, total_char, video_length, unique_char[]
-      const vCount = this.stats_obj.video_count + 1
-      const tChar = this.stats_obj.total_char + Number(this.indexCount)
-      const vLength = this.stats_obj.video_length + Number(this.video_length)
-      const obj = { video_count: vCount, total_char: tChar, video_length: vLength, unique_char: this.unique_char }
-      // console.log(obj)
-      this.$fire.firestore.collection('-video_stats').doc('stats_doc').set(obj).then(() => {
-        console.log('stats update success')
-      }).catch((err) => { console.log(err.message) })
+    async update_stats () {
+      const res = await this.$fire.firestore.collection('-video_stats').doc('stats_doc')
+        .update({
+          video_count: this.$fireModule.firestore.FieldValue.increment(1),
+          total_char: this.$fireModule.firestore.FieldValue.increment(Number(this.indexCount)),
+          video_length: this.$fireModule.firestore.FieldValue.increment(Number(this.duration)),
+          unique_char: this.unique_char
+        })
+      console.warn(res, 'stats updated')
     },
     save_meta () {
       const obj = { level: this.levelSel, access: this.accessSel, cc: this.ccSel, genre: this.genreSel, duration: Number(this.duration), title: this.title }
@@ -240,7 +240,7 @@ export default {
       const time = item.id.split(':')
       this.videoCollection[index].start = parseInt(time[0]) * 60 * 60 + parseInt(time[1]) * 60 + parseFloat(time[2])
       // this.saveDoc()
-      this.getJSON()
+      this.outputJSON()
     },
     playSegment (obj, i) {
       this.counter = i
