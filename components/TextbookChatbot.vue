@@ -67,9 +67,6 @@ export default {
       this.messages.push({ content: text, me: true, created_at: new Date().toLocaleTimeString() })
       // also send an empty message for bot speech spinner
       this.messages.push({ content: '', me: false, created_at: '' })
-      // this.$refs.scrolldiv.scrollTop = this.$refs.scrolldiv.scrollHeight
-      // const scrollDiv = this.$refs.scrolldiv
-      // scrollDiv.scrollTop = scrollDiv.scrollHeight
     },
     async dialogflowGateway (speech) {
       try {
