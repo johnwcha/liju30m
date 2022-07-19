@@ -53,7 +53,7 @@ function xml (str) {
 
 const initSpeech = new Vue({
   methods: {
-    init () {
+    init (lang = 'zh-CN') {
       player = new sdk.SpeakerAudioDestination()
       player.onAudioStart = function (_) {
         // console.log('synthesis audio started ===')
@@ -65,8 +65,13 @@ const initSpeech = new Vue({
       }
       speechConfig = sdk.SpeechConfig.fromSubscription(key, region)
       audioConfig = sdk.AudioConfig.fromSpeakerOutput(player)
-      // speechConfig.speechSynthesisLanguage = 'en-US'
-      speechConfig.speechSynthesisVoiceName = 'zh-CN-XiaoxiaoNeural'
+      if (lang === 'zh-CN') {
+        // speechConfig.speechSynthesisLanguage = 'en-US' or 'zh-CN' 'en-US-JennyNeural'
+        speechConfig.speechSynthesisVoiceName = 'zh-CN-XiaoxiaoNeural'
+      } else {
+        speechConfig.speechSynthesisLanguage = 'en-US'
+        speechConfig.speechSynthesisVoiceName = 'en-US-JennyNeural'
+      }
       // https://docs.microsoft.com/en-us/javascript/api/microsoft-cognitiveservices-speech-sdk/speechsynthesisoutputformat?view=azure-node-latest
       speechConfig.speechSynthesisOutputFormat = 4 // audio-16khz-128kbitrate-mono-mp3
       synthesizer = new sdk.SpeechSynthesizer(speechConfig, audioConfig)

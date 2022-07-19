@@ -39,6 +39,7 @@
 // import Vue from 'vue'
 // import Vuetify from 'vuetify'
 // Vue.use(Vuetify)
+import { initSpeech } from '../util/ttsservice'
 
 export default {
   data () {
@@ -50,11 +51,9 @@ export default {
   mounted () {
     // console.log(this.$fire.functions)
     // this.helloWorld()
-    this.messages.push({ content: 'Hello Friend! My name is Xiaoxiao. I am glad you are connecting today. What do you want to practice?', me: false, created_at: new Date().toLocaleTimeString() })
+    // this.messages.push({ content: 'Hello Friend! My name is Xiaoxiao. I am glad you are connecting today. What do you want to practice?', me: false, created_at: new Date().toLocaleTimeString() })
     this.sessionId = Math.random().toString(36).substring(7)
-    // this.$refs.scrolldiv.scrollTop = this.$refs.scrolldiv.scrollHeight
-    // const scrollDiv = this.$refs.scrolldiv
-    // scrollDiv.scrollTop = scrollDiv.scrollHeight
+    this.dialogflowGateway('hi')
   },
   methods: {
     onMessageSubmit (msg) {
@@ -72,11 +71,17 @@ export default {
       try {
         const res = await this.$fire.functions.httpsCallable('dialogflowGateway')({ stt: speech, sessionId: this.sessionId })
         console.log(res)
+        const speakphrase = []
         this.messages.pop()
         if (res.data.message) {
           res.data.message.forEach((msg) => {
+            speakphrase.push(msg[0])
             this.messages.push({ content: msg[0], me: false, created_at: new Date().toLocaleTimeString() })
           })
+        }
+        if (speakphrase.length > 0) {
+          initSpeech.init('en-US') // only available to speak(), NOT available to speakssml() or other functions()
+          initSpeech.speak(speakphrase.join(' '))
         }
       } catch (e) {
         console.log(e)
